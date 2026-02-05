@@ -1,4 +1,3 @@
-
 # Harbor Scale OSS
 
 <!-- OSS Badges -->
@@ -66,19 +65,62 @@ This repository ships with default credentials for ease of testing. **Before usi
 
 Failure to do so will leave your system vulnerable.
 
-
 ## 📡 API Ingestion
 
-Replace Harbor Scale Cloud URLs with your own domain, omitting the harbor ID.
+We support **Flexible Ingestion**. You can send data in a strict format or a flat, user-friendly format. The system automatically "explodes" flat JSON into individual metrics.
 
-### Single Data Push
-```
-POST http://yourdomain.com/api/v2/ingest/
+### 1. Flexible Format (Recommended)
+
+Send multiple metrics in a single flat JSON object.
+
+**POST** `/api/v2/ingest`
+
+```bash
+curl -X POST "http://localhost:8000/api/v2/ingest" \
+  -H "X-API-Key: your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ship_id": "server-01",
+    "cpu_load": 45.2,
+    "ram_usage": 1024,
+    "temperature": 55.0
+  }'
 ```
 
-### Batch Data Push
+*Result: Creates 3 separate metrics.*
+
+### 2. Strict Format (For SDK)
+
+Useful if you need to map a specific metric ID dynamically.
+
+**POST** `/api/v2/ingest`
+
+```bash
+curl -X POST "http://localhost:8000/api/v2/ingest" \
+  -H "X-API-Key: your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ship_id": "server-01",
+    "cargo_id": "cpu_load",
+    "value": 45.2
+  }'
+
 ```
-POST http://yourdomain.com/api/v2/ingest/batch
+
+### 3. Batch Ingestion
+
+You can send an array containing **mixed** formats (Flexible and Strict).
+
+**POST** `/api/v2/ingest/batch`
+
+```bash
+curl -X POST "http://localhost:8000/api/v2/ingest/batch" \
+  -H "X-API-Key: your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '[
+    { "ship_id": "server-A", "cpu": 50, "temp": 60 },
+    { "ship_id": "server-B", "cargo_id": "pressure", "value": 1013 }
+  ]'
 ```
 
 ### The Things Network (TTN) Webhook
@@ -92,20 +134,6 @@ Harbor Scale OSS supports direct ingestion from TTN v3 Webhooks. We automaticall
   * **Headers:** `X-API-Key: your_api_key_here`
 
 *Note: Ensure your TTN payload formatter returns a flat JSON object with numeric values in `decoded_payload`.*
-
-### Example Usage (Standard API)
-
-**Single Data Point:**
-
-```bash
-curl -X POST "http://localhost:8000/api/v2/ingest/" -H "X-API-Key: your_api_key_here" -H "Content-Type: application/json" -d '{"time": "2025-01-18T19:24:00.948Z", "ship_id": "test_device_single", "cargo_id": "test_metric", "value": 123.45}'
-```
-
-**Batch Data:**
-
-```bash
-curl -X POST "http://localhost:8000/api/v2/ingest/batch" -H "X-API-Key: your_api_key_here" -H "Content-Type: application/json" -d '[{"time": "2025-01-18T19:24:00.948Z", "ship_id": "batch_device", "cargo_id": "temperature", "value": 25.5}, {"time": "2025-01-18T19:24:00.948Z", "ship_id": "batch_device", "cargo_id": "humidity", "value": 60.2}]'
-```
 
 ## 📊 Visualization with Grafana
 

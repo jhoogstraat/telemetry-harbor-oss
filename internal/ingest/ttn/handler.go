@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"go-ingest-service/internal/cache"
 	"go-ingest-service/internal/config"
 	"go-ingest-service/internal/ingest/general"
 	"go-ingest-service/internal/models"
-	// Quota import removed for OSS
+	"go-ingest-service/internal/utils"
+
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -19,7 +19,7 @@ import (
 // IngestTTNData accepts a webhook from The Things Network.
 func IngestTTNData(c *fiber.Ctx) error {
 	// HarborDetails loading removed for OSS as SchemaName is not used in the struct
-	
+
 	rawBody := c.Body()
 	// fmt.Printf("Raw request body: %s\n", string(rawBody)) // Optional logging
 
@@ -71,7 +71,7 @@ func IngestTTNData(c *fiber.Ctx) error {
 
 	// A. Process Decoded Payload (User Data)
 	for key, val := range ttnPayload.UplinkMessage.DecodedPayload {
-		if floatVal, ok := toFloat64(val); ok {
+		if floatVal, ok := utils.ToFloat64(val); ok {
 			batch = append(batch, general.SensorData{
 				Time:    finalTime,
 				ShipID:  shipID,
@@ -100,7 +100,7 @@ func IngestTTNData(c *fiber.Ctx) error {
 		batch = append(batch, makePoint(finalTime, shipID, "spreading_factor", val))
 	}
 	// Frequency handling
-	if freqVal, ok := toFloat64(settings.Frequency); ok && freqVal > 0 {
+	if freqVal, ok := utils.ToFloat64(settings.Frequency); ok && freqVal > 0 {
 		batch = append(batch, makePoint(finalTime, shipID, "frequency", freqVal))
 	}
 
@@ -144,23 +144,3 @@ func makePoint(t time.Time, ship, cargo string, val float64) general.SensorData 
 	}
 }
 
-// Helper to handle JSON number parsing
-func toFloat64(unk interface{}) (float64, bool) {
-	switch i := unk.(type) {
-	case float64:
-		return i, true
-	case float32:
-		return float64(i), true
-	case int:
-		return float64(i), true
-	case int64:
-		return float64(i), true
-	case string:
-		if f, err := strconv.ParseFloat(i, 64); err == nil {
-			return f, true
-		}
-		return 0, false
-	default:
-		return 0, false
-	}
-}
